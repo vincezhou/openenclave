@@ -42,6 +42,16 @@ uint8_t __oe_initialized = 0;
 
 extern bool oe_disable_debug_malloc_check;
 
+// Quick fix to allow SGX-LKL to partition the heap
+// TODO: Add an official mechanism for clients to reserve heap memory.
+#if defined(OE_HEAP_ALLOTTED_PAGE_COUNT)
+#define OE_HEAP_ALLOTTED_SIZE (OE_HEAP_ALLOTTED_PAGE_COUNT * OE_PAGE_SIZE)
+#define OE_HEAP_END_ADDRESS \
+    ((unsigned char*)__oe_get_heap_base() + OE_HEAP_ALLOTTED_SIZE)
+#else
+#define OE_HEAP_END_ADDRESS ((unsigned char*)__oe_get_heap_end())
+#endif /* defined (OE_HEAP_ALLOTTED_PAGE_COUNT) */
+
 /*
 **==============================================================================
 **
@@ -177,7 +187,7 @@ static oe_result_t _handle_init_enclave(uint64_t arg_in)
 
             /* Initialize the allocator */
             oe_allocator_init(
-                (void*)__oe_get_heap_base(), (void*)__oe_get_heap_end());
+                (void*)__oe_get_heap_base(), (void*)OE_HEAP_END_ADDRESS);
 
             /* Call global constructors. Now they can safely use simulated
              * instructions like CPUID. */
